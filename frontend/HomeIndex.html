@@ -1,0 +1,1494 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Умный Дом - 3D Голосовое Управление</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
+            background-size: 400% 400%;
+            animation: gradient 15s ease infinite;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            color: #fff;
+        }
+
+        @keyframes gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .header {
+            text-align: center;
+            padding: 20px;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 10;
+        }
+
+        .header h1 {
+            font-size: 3em;
+            margin-bottom: 5px;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+
+        .header p {
+            font-size: 1.5em;
+            color: #ddd;
+        }
+
+        #scene-container {
+            flex: 1;
+            width: 100%;
+            background-color: #000;
+            position: relative;
+        }
+
+        .control-panel {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 20px;
+            background-color: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+            transition: transform 0.3s ease;
+            z-index: 100;
+        }
+
+        .control-panel.minimized {
+            transform: translateY(calc(100% - 60px));
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .minimize-btn {
+            background: none;
+            border: none;
+            color: #fff;
+            font-size: 24px;
+            cursor: pointer;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 15px;
+            border: none;
+            border-radius: 50px;
+            font-size: 1.2em;
+            background-color: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            backdrop-filter: blur(5px);
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
+            transition: all 0.3s;
+        }
+
+        input[type="text"]::placeholder {
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            background-color: rgba(255, 255, 255, 0.2);
+            box-shadow: 0 0 20px rgba(0, 162, 255, 0.5);
+        }
+
+        button {
+            padding: 15px 25px;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 1.1em;
+            font-weight: bold;
+            transition: all 0.3s;
+            background-color: #2196F3;
+            color: white;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+        }
+
+        button:active {
+            transform: translateY(1px);
+        }
+
+        #executeBtn {
+            background: linear-gradient(45deg, #2196F3, #21CBF3);
+        }
+
+        #voiceBtn {
+            background: linear-gradient(45deg, #4CAF50, #8BC34A);
+            width: 60px;
+            height: 60px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.5em;
+            border-radius: 50%;
+            padding: 0;
+        }
+
+        #voiceBtn.active {
+            background: linear-gradient(45deg, #f44336, #ff9800);
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        #switchLangBtn {
+            background: linear-gradient(45deg, #9C27B0, #673AB7);
+        }
+
+        .status-and-info {
+            display: flex;
+            gap: 20px;
+        }
+
+        .status-box {
+            flex: 1;
+            text-align: center;
+            padding: 15px;
+            background-color: rgba(0, 0, 0, 0.5);
+            border-radius: 15px;
+            color: #fff;
+            font-weight: 500;
+            font-size: 1.1em;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .device-status {
+            flex: 2;
+            padding: 15px;
+            background-color: rgba(0, 0, 0, 0.5);
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .device-status h3 {
+            color: #fff;
+            margin-bottom: 15px;
+            text-align: center;
+            font-size: 1.3em;
+        }
+
+        .device-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+        }
+
+        .device-item {
+            padding: 10px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .device-item span {
+            font-weight: bold;
+        }
+
+        .device-item span.on {
+            color: #4CAF50;
+        }
+
+        .device-item span.off {
+            color: #f44336;
+        }
+
+        .command-suggestions {
+            padding: 15px;
+            background-color: rgba(0, 0, 0, 0.5);
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin-top: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .command-suggestions h3 {
+            color: #fff;
+            margin-bottom: 10px;
+            font-size: 1.2em;
+        }
+
+        .suggestions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 10px;
+        }
+
+        .suggestion-item {
+            padding: 10px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .suggestion-item:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .room-selector {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 50;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .room-selector button {
+            padding: 10px;
+            text-align: left;
+        }
+
+        .view-controls {
+            position: absolute;
+            bottom: 100px;
+            left: 20px;
+            z-index: 50;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .view-controls button {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            font-size: 1.5em;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .loading-spinner {
+            width: 100px;
+            height: 100px;
+            border: 10px solid rgba(255, 255, 255, 0.1);
+            border-top: 10px solid #2196F3;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            font-size: 1.5em;
+            color: #fff;
+        }
+
+        .fullscreen-button {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 50;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.5em;
+            color: white;
+            cursor: pointer;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            transition: all 0.3s;
+        }
+
+        .fullscreen-button:hover {
+            background: rgba(0, 0, 0, 0.8);
+        }
+
+        /* Animation for status updates */
+        @keyframes statusUpdate {
+            0% { background-color: rgba(33, 150, 243, 0.3); }
+            50% { background-color: rgba(33, 150, 243, 0.6); }
+            100% { background-color: rgba(0, 0, 0, 0.5); }
+        }
+
+        .status-updated {
+            animation: statusUpdate 2s ease;
+        }
+
+        /* Tooltip styles */
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+
+        .tooltip .tooltip-text {
+            visibility: hidden;
+            width: 120px;
+            background-color: black;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 5px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -60px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .tooltip:hover .tooltip-text {
+            visibility: visible;
+            opacity: 1;
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="loading-overlay" id="loading-overlay">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Загрузка умного дома...</div>
+    </div>
+
+    <div class="header">
+        <h1>Умный Дом</h1>
+        <p>Интерактивное 3D управление</p>
+    </div>
+
+    <div id="scene-container"></div>
+
+    <div class="fullscreen-button" id="fullscreen-btn">
+        <span>⛶</span>
+    </div>
+
+    <div class="room-selector">
+        <h3>Комнаты:</h3>
+        <button id="view-exterior">Экстерьер</button>
+        <button id="view-hall">Холл</button>
+        <button id="view-bedroom">Спальня</button>
+        <button id="view-corridor">Коридор</button>
+        <button id="view-entrance">Прихожая</button>
+        <button id="view-garage">Гараж</button>
+    </div>
+
+    <div class="view-controls">
+        <button id="rotate-left">↺</button>
+        <button id="rotate-right">↻</button>
+        <button id="zoom-in">+</button>
+        <button id="zoom-out">−</button>
+    </div>
+
+    <div class="control-panel" id="control-panel">
+        <div class="panel-header">
+            <h2>Управление домом</h2>
+            <button class="minimize-btn" id="minimize-btn">^</button>
+        </div>
+
+        <div class="controls">
+            <input type="text" id="command" placeholder="Скажите или введите команду...">
+            <button id="executeBtn">Выполнить</button>
+            <button id="voiceBtn">🎤</button>
+            <button id="switchLangBtn">RU/KZ</button>
+        </div>
+
+        <div class="status-and-info">
+            <div class="status-box" id="status">Готов к приему команд</div>
+
+            <div class="device-status">
+                <h3>Состояние устройств</h3>
+                <div class="device-grid">
+                    <div class="device-item">
+                        <p>Крыша:</p>
+                        <span id="roof-status" class="off">Закрыта</span>
+                    </div>
+                    <div class="device-item">
+                        <p>Свет:</p>
+                        <span id="light-status" class="off">Выключен</span>
+                    </div>
+                    <div class="device-item">
+                        <p>Двери:</p>
+                        <span id="doors-status" class="off">Закрыты</span>
+                    </div>
+                    <div class="device-item">
+                        <p>Окна:</p>
+                        <span id="windows-status" class="off">Закрыты</span>
+                    </div>
+                    <div class="device-item">
+                        <p>Гараж:</p>
+                        <span id="garage-status" class="off">Закрыт</span>
+                    </div>
+                    <div class="device-item">
+                        <p>Полив:</p>
+                        <span id="sprinkler-status" class="off">Выключен</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="command-suggestions">
+            <h3>Доступные команды:</h3>
+            <div class="suggestions-grid">
+                <div class="suggestion-item" data-command="открой крышу">Открыть крышу</div>
+                <div class="suggestion-item" data-command="закрой крышу">Закрыть крышу</div>
+                <div class="suggestion-item" data-command="открой гараж">Открыть гараж</div>
+                <div class="suggestion-item" data-command="закрой гараж">Закрыть гараж</div>
+                <div class="suggestion-item" data-command="открой все двери">Открыть все двери</div>
+                <div class="suggestion-item" data-command="закрой все двери">Закрыть все двери</div>
+                <div class="suggestion-item" data-command="включи свет">Включить свет</div>
+                <div class="suggestion-item" data-command="выключи свет">Выключить свет</div>
+                <div class="suggestion-item" data-command="закрой дом">Закрыть дом</div>
+                <div class="suggestion-item" data-command="включи все">Включить все</div>
+                <div class="suggestion-item" data-command="выключи все">Выключить все</div>
+                <div class="suggestion-item" data-command="открой окна">Открыть окна</div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+    <script>
+        // Main script for the 3D Smart Home
+        document.addEventListener('DOMContentLoaded', function() {
+            // Remove loading overlay after simulated loading time
+            setTimeout(() => {
+                document.getElementById('loading-overlay').style.display = 'none';
+            }, 2000);
+
+            // Setup Three.js scene
+            const scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x87CEEB); // Sky blue background
+
+            const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(15, 8, 15);
+
+            const renderer = new THREE.WebGLRenderer({antialias: true});
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+
+            const container = document.getElementById('scene-container');
+            container.appendChild(renderer.domElement);
+
+            // Add ambient light
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+            scene.add(ambientLight);
+
+            // Add directional light (sun)
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+            directionalLight.position.set(10, 20, 10);
+            directionalLight.castShadow = true;
+            directionalLight.shadow.mapSize.width = 2048;
+            directionalLight.shadow.mapSize.height = 2048;
+            scene.add(directionalLight);
+
+            // Ground
+            const groundGeometry = new THREE.PlaneGeometry(50, 50);
+            const groundMaterial = new THREE.MeshStandardMaterial({
+                color: 0x7CFC00,
+                roughness: 0.8,
+                metalness: 0.2
+            });
+            const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+            ground.rotation.x = -Math.PI / 2;
+            ground.receiveShadow = true;
+            scene.add(ground);
+
+            // House components
+            const house = new THREE.Group();
+            scene.add(house);
+
+            // House base/foundation
+            const baseGeometry = new THREE.BoxGeometry(10, 0.5, 8);
+            const baseMaterial = new THREE.MeshStandardMaterial({color: 0x808080});
+            const base = new THREE.Mesh(baseGeometry, baseMaterial);
+            base.position.y = 0.25;
+            base.receiveShadow = true;
+            house.add(base);
+
+            // House main structure
+            const wallsGeometry = new THREE.BoxGeometry(10, 4, 8);
+            const wallsMaterial = new THREE.MeshStandardMaterial({color: 0xE8E8E8});
+            const walls = new THREE.Mesh(wallsGeometry, wallsMaterial);
+            walls.position.y = 2.5;
+            walls.castShadow = true;
+            walls.receiveShadow = true;
+            house.add(walls);
+
+            // Roof (will be animated)
+            const roofGeometry = new THREE.ConeGeometry(8, 3, 4);
+            const roofMaterial = new THREE.MeshStandardMaterial({color: 0x8B4513});
+            const roof = new THREE.Mesh(roofGeometry, roofMaterial);
+            roof.position.y = 6;
+            roof.rotation.y = Math.PI / 4;
+            roof.castShadow = true;
+            house.add(roof);
+
+            // Garage (will be animated)
+            const garageGeometry = new THREE.BoxGeometry(5, 3, 3);
+            const garageMaterial = new THREE.MeshStandardMaterial({color: 0xD3D3D3});
+            const garage = new THREE.Mesh(garageGeometry, garageMaterial);
+            garage.position.set(-7.5, 1.5, 0);
+            garage.castShadow = true;
+            garage.receiveShadow = true;
+            house.add(garage);
+
+            // Garage door (will be animated)
+            const garageDoorGeometry = new THREE.PlaneGeometry(3.5, 2.5);
+            const garageDoorMaterial = new THREE.MeshStandardMaterial({
+                color: 0x8B4513,
+                side: THREE.DoubleSide
+            });
+            const garageDoor = new THREE.Mesh(garageDoorGeometry, garageDoorMaterial);
+            garageDoor.position.set(-5.01, 1.25, 0);
+            garageDoor.rotation.y = Math.PI / 2;
+            house.add(garageDoor);
+
+            // Windows
+            for (let i = 0; i < 2; i++) {
+                for (let j = 0; j < 2; j++) {
+                    const windowGeometry = new THREE.PlaneGeometry(1.5, 1.5);
+                    const windowMaterial = new THREE.MeshStandardMaterial({
+                        color: 0x87CEFA,
+                        transparent: true,
+                        opacity: 0.6,
+                        side: THREE.DoubleSide
+                    });
+                    const window = new THREE.Mesh(windowGeometry, windowMaterial);
+                    window.position.set(
+                        (i === 0 ? -3 : 3),
+                        2.5,
+                        4.01 * (j === 0 ? 1 : -1)
+                    );
+                    window.rotation.y = (j === 0 ? 0 : Math.PI);
+                    house.add(window);
+                }
+            }
+
+            // Main door
+            const doorGeometry = new THREE.PlaneGeometry(2, 3);
+            const doorMaterial = new THREE.MeshStandardMaterial({
+                color: 0x8B4513,
+                side: THREE.DoubleSide
+            });
+            const mainDoor = new THREE.Mesh(doorGeometry, doorMaterial);
+            mainDoor.position.set(0, 1.5, 4.01);
+            house.add(mainDoor);
+
+            // Interior rooms (simplified shapes representing each room)
+            const rooms = new THREE.Group();
+            house.add(rooms);
+
+            // Hall (center)
+            const hallGeometry = new THREE.BoxGeometry(4, 3.5, 4);
+            const hallMaterial = new THREE.MeshStandardMaterial({
+                color: 0xFAF0E6,
+                transparent: true,
+                opacity: 0.8
+            });
+            const hall = new THREE.Mesh(hallGeometry, hallMaterial);
+            hall.position.set(0, 2, 0);
+            rooms.add(hall);
+
+            // Bedroom
+            const bedroomGeometry = new THREE.BoxGeometry(4, 3.5, 3);
+            const bedroomMaterial = new THREE.MeshStandardMaterial({
+                color: 0xE6E6FA,
+                transparent: true,
+                opacity: 0.8
+            });
+            const bedroom = new THREE.Mesh(bedroomGeometry, bedroomMaterial);
+            bedroom.position.set(3, 2, -2);
+            rooms.add(bedroom);
+
+            // Corridor
+            const corridorGeometry = new THREE.BoxGeometry(8, 3.5, 1.5);
+            const corridorMaterial = new THREE.MeshStandardMaterial({
+                color: 0xFFE4E1,
+                transparent: true,
+                opacity: 0.8
+            });
+            const corridor = new THREE.Mesh(corridorGeometry, corridorMaterial);
+            corridor.position.set(0, 2, -3);
+            rooms.add(corridor);
+
+            // Entrance
+            const entranceGeometry = new THREE.BoxGeometry(3, 3.5, 2);
+            const entranceMaterial = new THREE.MeshStandardMaterial({
+                color: 0xF0F8FF,
+                transparent: true,
+                opacity: 0.8
+            });
+            const entrance = new THREE.Mesh(entranceGeometry, entranceMaterial);
+            entrance.position.set(0, 2, 3);
+            rooms.add(entrance);
+
+            // Interior doors
+            const createDoor = (x, y, z, rotY = 0) => {
+                const doorGeometry = new THREE.PlaneGeometry(1, 2);
+                const doorMaterial = new THREE.MeshStandardMaterial({
+                    color: 0x8B4513,
+                    side: THREE.DoubleSide
+                });
+                const door = new THREE.Mesh(doorGeometry, doorMaterial);
+                door.position.set(x, y, z);
+                door.rotation.y = rotY;
+                return door;
+            };
+
+            const interiorDoors = [
+                createDoor(0, 1, 1, 0), // Hall to Entrance
+                createDoor(1.5, 1, 0, Math.PI / 2), // Hall to Bedroom
+                createDoor(0, 1, -1.5, 0), // Hall to Corridor
+                createDoor(-3, 1, -2.5, Math.PI / 2) // Corridor to Garage
+            ];
+
+            interiorDoors.forEach(door => {
+                rooms.add(door);
+            });
+
+            // Simple furniture for each room
+            // Bedroom furniture
+            const bed = new THREE.Mesh(
+                new THREE.BoxGeometry(2, 0.5, 1.5),
+                new THREE.MeshStandardMaterial({color: 0x4682B4})
+            );
+            bed.position.set(3, 0.75, -2);
+            rooms.add(bed);
+
+            // Hall furniture
+            const table = new THREE.Mesh(
+                new THREE.BoxGeometry(1.5, 0.8, 1),
+                new THREE.MeshStandardMaterial({color: 0x8B4513})
+            );
+            table.position.set(0, 0.9, 0);
+            rooms.add(table);
+
+            // Entrance furniture
+            const coatRack = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.1, 0.2, 2),
+                new THREE.MeshStandardMaterial({color: 0x8B4513})
+            );
+            coatRack.position.set(-1, 1, 3);
+            rooms.add(coatRack);
+
+            // Garage items
+            const car = new THREE.Mesh(
+                new THREE.BoxGeometry(3.5, 1.2, 1.8),
+                new THREE.MeshStandardMaterial({color: 0xFF0000})
+            );
+            car.position.set(-7.5, 1.1, 0);
+            car.visible = false; // Only visible when garage is open
+            house.add(car);
+
+            // Lights for the house
+            const createLight = (x, y, z, intensity = 1, color = 0xFFFFFF) => {
+                const light = new THREE.PointLight(color, intensity, 10);
+                light.position.set(x, y, z);
+                light.visible = false; // Off by default
+                return light;
+            };
+
+            const lights = [
+                createLight(0, 3, 0, 1.5), // Hall
+                createLight(3, 3, -2), // Bedroom
+                createLight(0, 3, -3), // Corridor
+                createLight(0, 3, 3), // Entrance
+                createLight(-7.5, 3, 0) // Garage
+            ];
+
+            lights.forEach(light => {
+                house.add(light);
+            });
+
+            // Set initial visibility of rooms to false (will be shown based on view)
+            rooms.visible = false;
+
+            // Animation properties
+            const animations = {
+                roof: {
+                    isOpen: false,
+                    openY: 9,
+                    closedY: 6,
+                    original: {y: 6}
+                },
+                garage: {
+                    isOpen: false,
+                    openY: 5,
+                    closedY: 0,
+                    original: {y: 0}
+                },
+                doors: {
+                    areOpen: false,
+                    openRotY: Math.PI / 2,
+                    closedRotY: 0,
+                    mainDoor: mainDoor,
+                    interiorDoors: interiorDoors
+                },
+                windows: {
+                    areOpen: false
+                },
+                lights: {
+                    areOn: false,
+                    lights: lights
+                },
+                sprinklers: {
+                    areOn: false
+                }
+            };
+
+// Current view state
+            let currentView = 'exterior';
+            let orbitControls = false;
+            let autoRotate = false;
+
+// Camera control variables
+            let targetRotation = 0;
+            let currentRotation = 0;
+            const rotationSpeed = 0.01;
+            let targetZoom = 15;
+            let currentZoom = 15;
+            const zoomSpeed = 0.1;
+
+// Control panel
+            const controlPanel = document.getElementById('control-panel');
+            const minimizeBtn = document.getElementById('minimize-btn');
+
+            minimizeBtn.addEventListener('click', function () {
+                controlPanel.classList.toggle('minimized');
+                minimizeBtn.textContent = controlPanel.classList.contains('minimized') ? 'v' : '^';
+            });
+
+// Setup room view buttons
+            document.getElementById('view-exterior').addEventListener('click', () => changeView('exterior'));
+            document.getElementById('view-hall').addEventListener('click', () => changeView('hall'));
+            document.getElementById('view-bedroom').addEventListener('click', () => changeView('bedroom'));
+            document.getElementById('view-corridor').addEventListener('click', () => changeView('corridor'));
+            document.getElementById('view-entrance').addEventListener('click', () => changeView('entrance'));
+            document.getElementById('view-garage').addEventListener('click', () => changeView('garage'));
+
+// Setup view control buttons
+            document.getElementById('rotate-left').addEventListener('click', () => {
+                targetRotation += Math.PI / 4;
+            });
+            document.getElementById('rotate-right').addEventListener('click', () => {
+                targetRotation -= Math.PI / 4;
+            });
+            document.getElementById('zoom-in').addEventListener('click', () => {
+                targetZoom = Math.max(5, targetZoom - 2);
+            });
+            document.getElementById('zoom-out').addEventListener('click', () => {
+                targetZoom = Math.min(30, targetZoom + 2);
+            });
+
+// Fullscreen button
+            document.getElementById('fullscreen-btn').addEventListener('click', toggleFullScreen);
+
+            function toggleFullScreen() {
+                if (!document.fullscreenElement) {
+                    document.documentElement.requestFullscreen().catch(err => {
+                        alert(`Ошибка при переходе в полноэкранный режим: ${err.message}`);
+                    });
+                } else {
+                    if (document.exitFullscreen) {
+                        document.exitFullscreen();
+                    }
+                }
+            }
+
+// Function to change the view to a specific room
+            function changeView(view) {
+                currentView = view;
+
+                // Reset camera position based on view
+                switch (view) {
+                    case 'exterior':
+                        camera.position.set(15, 8, 15);
+                        targetRotation = 0;
+                        targetZoom = 15;
+                        rooms.visible = false;
+                        walls.material.opacity = 1;
+                        walls.material.transparent = false;
+                        break;
+                    case 'hall':
+                        camera.position.set(0, 2, 0);
+                        targetRotation = Math.PI;
+                        targetZoom = 5;
+                        rooms.visible = true;
+                        walls.material.opacity = 0.3;
+                        walls.material.transparent = true;
+                        break;
+                    case 'bedroom':
+                        camera.position.set(3, 2, -2);
+                        targetRotation = Math.PI / 2;
+                        targetZoom = 5;
+                        rooms.visible = true;
+                        walls.material.opacity = 0.3;
+                        walls.material.transparent = true;
+                        break;
+                    case 'corridor':
+                        camera.position.set(0, 2, -3);
+                        targetRotation = 0;
+                        targetZoom = 5;
+                        rooms.visible = true;
+                        walls.material.opacity = 0.3;
+                        walls.material.transparent = true;
+                        break;
+                    case 'entrance':
+                        camera.position.set(0, 2, 3);
+                        targetRotation = Math.PI;
+                        targetZoom = 5;
+                        rooms.visible = true;
+                        walls.material.opacity = 0.3;
+                        walls.material.transparent = true;
+                        break;
+                    case 'garage':
+                        camera.position.set(-7.5, 2, 0);
+                        targetRotation = -Math.PI / 2;
+                        targetZoom = 5;
+                        rooms.visible = true;
+                        walls.material.opacity = 0.3;
+                        walls.material.transparent = true;
+                        break;
+                }
+
+                updateStatus(`Просмотр: ${view}`);
+            }
+
+// Function to smoothly animate the camera
+            function updateCamera() {
+                // Smoothly interpolate rotation
+                currentRotation += (targetRotation - currentRotation) * 0.05;
+                camera.position.x = Math.sin(currentRotation) * currentZoom;
+                camera.position.z = Math.cos(currentRotation) * currentZoom;
+
+                // Smoothly interpolate zoom
+                currentZoom += (targetZoom - currentZoom) * 0.05;
+
+                // Look at the house
+                camera.lookAt(0, 2, 0);
+            }
+
+// Function to handle window resize
+            function onWindowResize() {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            }
+
+            window.addEventListener('resize', onWindowResize);
+
+// Command execution and voice control
+            const commandInput = document.getElementById('command');
+            const executeBtn = document.getElementById('executeBtn');
+            const voiceBtn = document.getElementById('voiceBtn');
+            const switchLangBtn = document.getElementById('switchLangBtn');
+            const suggestionItems = document.querySelectorAll('.suggestion-item');
+
+// Language toggle (Russian/Kazakh)
+            let currentLanguage = 'ru';
+            switchLangBtn.addEventListener('click', function () {
+                currentLanguage = currentLanguage === 'ru' ? 'kz' : 'ru';
+
+                // Update UI to reflect language change
+                if (currentLanguage === 'ru') {
+                    commandInput.placeholder = 'Скажите или введите команду...';
+                    updateStatus('Язык изменен на русский');
+                } else {
+                    commandInput.placeholder = 'Командаңызды айтыңыз немесе енгізіңіз...';
+                    updateStatus('Тіл қазақ тіліне өзгертілді');
+                }
+            });
+
+// Command suggestions click
+            suggestionItems.forEach(item => {
+                item.addEventListener('click', function () {
+                    const command = this.getAttribute('data-command');
+                    commandInput.value = command;
+                    executeCommand();
+                });
+            });
+
+// Execute button click
+            executeBtn.addEventListener('click', executeCommand);
+
+// Enter key press in input
+            commandInput.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') {
+                    executeCommand();
+                }
+            });
+
+// Voice recognition setup
+            let recognition;
+            if ('webkitSpeechRecognition' in window) {
+                recognition = new webkitSpeechRecognition();
+                recognition.continuous = false;
+                recognition.interimResults = false;
+
+                recognition.onstart = function () {
+                    voiceBtn.classList.add('active');
+                    updateStatus('Слушаю...');
+                };
+
+                recognition.onend = function () {
+                    voiceBtn.classList.remove('active');
+                    updateStatus('Готов к приему команд');
+                };
+
+                recognition.onresult = function (event) {
+                    const transcript = event.results[0][0].transcript.toLowerCase();
+                    commandInput.value = transcript;
+                    executeCommand();
+                };
+
+                recognition.onerror = function (event) {
+                    voiceBtn.classList.remove('active');
+                    updateStatus('Ошибка распознавания: ' + event.error);
+                };
+
+                // Voice button click
+                voiceBtn.addEventListener('click', function () {
+                    if (recognition && !voiceBtn.classList.contains('active')) {
+                        recognition.lang = currentLanguage === 'ru' ? 'ru-RU' : 'kk-KZ';
+                        recognition.start();
+                    }
+                });
+            } else {
+                voiceBtn.style.display = 'none';
+                updateStatus('Распознавание голоса не поддерживается в этом браузере');
+            }
+
+// Command patterns (both in Russian and Kazakh)
+            const commandPatterns = {
+                openRoof: {
+                    ru: /(открой|открыть) (крышу|крыша)/i,
+                    kz: /(шатырды|төбесін) (аш|ашу)/i
+                },
+                closeRoof: {
+                    ru: /(закрой|закрыть) (крышу|крыша)/i,
+                    kz: /(шатырды|төбесін) (жап|жабу)/i
+                },
+                openGarage: {
+                    ru: /(открой|открыть) (гараж)/i,
+                    kz: /(гаражды) (аш|ашу)/i
+                },
+                closeGarage: {
+                    ru: /(закрой|закрыть) (гараж)/i,
+                    kz: /(гаражды) (жап|жабу)/i
+                },
+                openDoors: {
+                    ru: /(открой|открыть) (все )?(двери|дверь)/i,
+                    kz: /(барлық )?(есіктер(ді)?|есік(ті)?) (аш|ашу)/i
+                },
+                closeDoors: {
+                    ru: /(закрой|закрыть) (все )?(двери|дверь)/i,
+                    kz: /(барлық )?(есіктер(ді)?|есік(ті)?) (жап|жабу)/i
+                },
+                openWindows: {
+                    ru: /(открой|открыть) (все )?(окна|окно)/i,
+                    kz: /(барлық )?(терезе(лер|ні)?) (аш|ашу)/i
+                },
+                closeWindows: {
+                    ru: /(закрой|закрыть) (все )?(окна|окно)/i,
+                    kz: /(барлық )?(терезе(лер|ні)?) (жап|жабу)/i
+                },
+                turnOnLights: {
+                    ru: /(включи|включить) (весь |все )?(свет|освещение)/i,
+                    kz: /(жарық(ты)?|шам(ды)?) (қос|қосу)/i
+                },
+                turnOffLights: {
+                    ru: /(выключи|выключить) (весь |все )?(свет|освещение)/i,
+                    kz: /(жарық(ты)?|шам(ды)?) (өшір|сөндір|өшіру)/i
+                },
+                turnOnSprinklers: {
+                    ru: /(включи|включить) (полив|систему полива)/i,
+                    kz: /(суару(ды)?|суару жүйесін) (қос|қосу)/i
+                },
+                turnOffSprinklers: {
+                    ru: /(выключи|выключить) (полив|систему полива)/i,
+                    kz: /(суару(ды)?|суару жүйесін) (өшір|сөндір|өшіру)/i
+                },
+                closeHouse: {
+                    ru: /(закрой|закрыть) (дом)/i,
+                    kz: /(үйді) (жап|жабу)/i
+                },
+                turnOnEverything: {
+                    ru: /(включи|включить) (все)/i,
+                    kz: /(барлығын) (қос|қосу)/i
+                },
+                turnOffEverything: {
+                    ru: /(выключи|выключить) (все)/i,
+                    kz: /(барлығын) (өшір|сөндір|өшіру)/i
+                }
+            };
+
+// Function to execute commands
+            function executeCommand() {
+                const command = commandInput.value.toLowerCase().trim();
+                let executed = false;
+
+                // Check command against patterns
+                Object.keys(commandPatterns).forEach(action => {
+                    const pattern = commandPatterns[action][currentLanguage];
+                    if (pattern.test(command)) {
+                        switch (action) {
+                            case 'openRoof':
+                                animateRoof(true);
+                                executed = true;
+                                break;
+                            case 'closeRoof':
+                                animateRoof(false);
+                                executed = true;
+                                break;
+                            case 'openGarage':
+                                animateGarage(true);
+                                executed = true;
+                                break;
+                            case 'closeGarage':
+                                animateGarage(false);
+                                executed = true;
+                                break;
+                            case 'openDoors':
+                                animateDoors(true);
+                                executed = true;
+                                break;
+                            case 'closeDoors':
+                                animateDoors(false);
+                                executed = true;
+                                break;
+                            case 'openWindows':
+                                toggleWindows(true);
+                                executed = true;
+                                break;
+                            case 'closeWindows':
+                                toggleWindows(false);
+                                executed = true;
+                                break;
+                            case 'turnOnLights':
+                                toggleLights(true);
+                                executed = true;
+                                break;
+                            case 'turnOffLights':
+                                toggleLights(false);
+                                executed = true;
+                                break;
+                            case 'turnOnSprinklers':
+                                toggleSprinklers(true);
+                                executed = true;
+                                break;
+                            case 'turnOffSprinklers':
+                                toggleSprinklers(false);
+                                executed = true;
+                                break;
+                            case 'closeHouse':
+                                closeHouse();
+                                executed = true;
+                                break;
+                            case 'turnOnEverything':
+                                turnOnEverything();
+                                executed = true;
+                                break;
+                            case 'turnOffEverything':
+                                turnOffEverything();
+                                executed = true;
+                                break;
+                        }
+                    }
+                });
+
+                if (executed) {
+                    commandInput.value = '';
+                    updateStatusDisplay();
+                } else {
+                    updateStatus('Команда не распознана');
+                }
+            }
+
+// Animation functions
+            function animateRoof(open) {
+                const targetY = open ? animations.roof.openY : animations.roof.closedY;
+                animations.roof.isOpen = open;
+
+                // Create animation
+                const animate = () => {
+                    const current = roof.position.y;
+                    const diff = targetY - current;
+
+                    if (Math.abs(diff) > 0.01) {
+                        roof.position.y += diff * 0.05;
+                        requestAnimationFrame(animate);
+                    } else {
+                        roof.position.y = targetY;
+                        updateStatus(open ? 'Крыша открыта' : 'Крыша закрыта');
+                    }
+                };
+
+                animate();
+            }
+
+            function animateGarage(open) {
+                const targetY = open ? animations.garage.openY : animations.garage.closedY;
+                animations.garage.isOpen = open;
+
+                // Show/hide car when garage opens/closes
+                car.visible = open;
+
+                // Create animation
+                const animate = () => {
+                    const current = garageDoor.position.y;
+                    const diff = targetY - current;
+
+                    if (Math.abs(diff) > 0.01) {
+                        garageDoor.position.y += diff * 0.05;
+                        requestAnimationFrame(animate);
+                    } else {
+                        garageDoor.position.y = targetY;
+                        updateStatus(open ? 'Гараж открыт' : 'Гараж закрыт');
+                    }
+                };
+
+                animate();
+            }
+
+            function animateDoors(open) {
+                animations.doors.areOpen = open;
+                const targetRot = open ? animations.doors.openRotY : animations.doors.closedRotY;
+
+                // Animate main door
+                const animateMainDoor = () => {
+                    const diff = targetRot - mainDoor.rotation.y;
+
+                    if (Math.abs(diff) > 0.01) {
+                        mainDoor.rotation.y += diff * 0.1;
+                        requestAnimationFrame(animateMainDoor);
+                    } else {
+                        mainDoor.rotation.y = targetRot;
+                    }
+                };
+
+                // Animate interior doors
+                const animateInteriorDoors = () => {
+                    let allDone = true;
+
+                    animations.doors.interiorDoors.forEach(door => {
+                        const originalRot = door.userData.originalRot || 0;
+                        const targetRotation = open ? originalRot + Math.PI / 2 : originalRot;
+                        const diff = targetRotation - door.rotation.y;
+
+                        if (Math.abs(diff) > 0.01) {
+                            door.rotation.y += diff * 0.1;
+                            allDone = false;
+                        } else {
+                            door.rotation.y = targetRotation;
+                        }
+
+                        // Store original rotation on first run
+                        if (!door.userData.originalRot) {
+                            door.userData.originalRot = door.rotation.y;
+                        }
+                    });
+
+                    if (!allDone) {
+                        requestAnimationFrame(animateInteriorDoors);
+                    }
+                };
+
+                animateMainDoor();
+                animateInteriorDoors();
+                updateStatus(open ? 'Двери открыты' : 'Двери закрыты');
+            }
+
+            function toggleWindows(open) {
+                animations.windows.areOpen = open;
+
+                // Change window opacity/color to simulate open/closed
+                walls.children.forEach(child => {
+                    if (child.material && child.material.color) {
+                        child.material.color.set(open ? 0x87CEFA : 0x4682B4);
+                        child.material.opacity = open ? 0.3 : 0.8;
+                    }
+                });
+
+                updateStatus(open ? 'Окна открыты' : 'Окна закрыты');
+            }
+
+            function toggleLights(on) {
+                animations.lights.areOn = on;
+
+                // Turn all lights on/off
+                animations.lights.lights.forEach(light => {
+                    light.visible = on;
+                });
+
+                // Add ambient glow to rooms when lights are on
+                rooms.children.forEach(child => {
+                    if (child.material) {
+                        if (on) {
+                            child.material.emissive = new THREE.Color(0x333333);
+                        } else {
+                            child.material.emissive = new THREE.Color(0x000000);
+                        }
+                    }
+                });
+
+                updateStatus(on ? 'Свет включен' : 'Свет выключен');
+            }
+
+            function toggleSprinklers(on) {
+                animations.sprinklers.areOn = on;
+
+                // In a real implementation, we would add water particle effects
+                // For now, just change ground color to simulate wetness
+                if (on) {
+                    ground.material.color.set(0x3a9d23);
+                } else {
+                    ground.material.color.set(0x7CFC00);
+                }
+
+                updateStatus(on ? 'Полив включен' : 'Полив выключен');
+            }
+
+            function closeHouse() {
+                // Close everything
+                if (animations.roof.isOpen) animateRoof(false);
+                if (animations.garage.isOpen) animateGarage(false);
+                if (animations.doors.areOpen) animateDoors(false);
+                if (animations.windows.areOpen) toggleWindows(false);
+                if (animations.lights.areOn) toggleLights(false);
+                if (animations.sprinklers.areOn) toggleSprinklers(false);
+
+                updateStatus('Дом закрыт');
+            }
+
+            function turnOnEverything() {
+                // Turn on everything
+                if (!animations.roof.isOpen) animateRoof(true);
+                if (!animations.garage.isOpen) animateGarage(true);
+                if (!animations.doors.areOpen) animateDoors(true);
+                if (!animations.windows.areOpen) toggleWindows(true);
+                if (!animations.lights.areOn) toggleLights(true);
+                if (!animations.sprinklers.areOn) toggleSprinklers(true);
+
+                updateStatus('Все включено');
+            }
+
+            function turnOffEverything() {
+                // Turn off everything
+                if (animations.roof.isOpen) animateRoof(false);
+                if (animations.garage.isOpen) animateGarage(false);
+                if (animations.doors.areOpen) animateDoors(false);
+                if (animations.windows.areOpen) toggleWindows(false);
+                if (animations.lights.areOn) toggleLights(false);
+                if (animations.sprinklers.areOn) toggleSprinklers(false);
+
+                updateStatus('Все выключено');
+            }
+
+// Status updates
+            function updateStatus(message) {
+                const statusElement = document.getElementById('status');
+                statusElement.textContent = message;
+
+                // Add animation effect
+                statusElement.classList.remove('status-updated');
+                void statusElement.offsetWidth; // Trigger reflow
+                statusElement.classList.add('status-updated');
+            }
+
+// Update status display elements
+            function updateStatusDisplay() {
+                document.getElementById('roof-status').textContent = animations.roof.isOpen ? 'Открыта' : 'Закрыта';
+                document.getElementById('roof-status').className = animations.roof.isOpen ? 'on' : 'off';
+
+                document.getElementById('light-status').textContent = animations.lights.areOn ? 'Включен' : 'Выключен';
+                document.getElementById('light-status').className = animations.lights.areOn ? 'on' : 'off';
+
+                document.getElementById('doors-status').textContent = animations.doors.areOpen ? 'Открыты' : 'Закрыты';
+                document.getElementById('doors-status').className = animations.doors.areOpen ? 'on' : 'off';
+
+                document.getElementById('windows-status').textContent = animations.windows.areOpen ? 'Открыты' : 'Закрыты';
+                document.getElementById('windows-status').className = animations.windows.areOpen ? 'on' : 'off';
+
+                document.getElementById('garage-status').textContent = animations.garage.isOpen ? 'Открыт' : 'Закрыт';
+                document.getElementById('garage-status').className = animations.garage.isOpen ? 'on' : 'off';
+
+                document.getElementById('sprinkler-status').textContent = animations.sprinklers.areOn ? 'Включен' : 'Выключен';
+                document.getElementById('sprinkler-status').className = animations.sprinklers.areOn ? 'on' : 'off';
+            }
+
+// Add mouse and touch controls for better user experience
+            let isDragging = false;
+            let previousMousePosition = {x: 0, y: 0};
+
+            container.addEventListener('mousedown', function (e) {
+                isDragging = true;
+                previousMousePosition = {x: e.clientX, y: e.clientY};
+            }, false);
+
+            container.addEventListener('mousemove', function (e) {
+                if (isDragging) {
+                    const deltaMove = {
+                        x: e.clientX - previousMousePosition.x,
+                        y: e.clientY - previousMousePosition.y
+                    };
+
+                    if (deltaMove.x != 0) {
+                        targetRotation += deltaMove.x * 0.01;
+                    }
+
+                    previousMousePosition = {x: e.clientX, y: e.clientY};
+                }
+            }, false);
+
+            container.addEventListener('mouseup', function (e) {
+                isDragging = false;
+            }, false);
+
+            container.addEventListener('mouseleave', function (e) {
+                isDragging = false;
+            }, false);
+
+// Add touch support
+            container.addEventListener('touchstart', function (e) {
+                if (e.touches.length === 1) {
+                    isDragging = true;
+                    previousMousePosition = {x: e.touches[0].clientX, y: e.touches[0].clientY};
+                }
+            }, false);
+
+            container.addEventListener('touchmove', function (e) {
+                if (isDragging && e.touches.length === 1) {
+                    const deltaMove = {
+                        x: e.touches[0].clientX - previousMousePosition.x,
+                        y: e.touches[0].clientY - previousMousePosition.y
+                    };
+
+                    if (deltaMove.x != 0) {
+                        targetRotation += deltaMove.x * 0.01;
+                    }
+
+                    previousMousePosition = {x: e.touches[0].clientX, y: e.touches[0].clientY};
+                    e.preventDefault(); // Prevent scrolling while dragging
+                }
+            }, false);
+
+            container.addEventListener('touchend', function (e) {
+                isDragging = false;
+            }, false);
+
+// Add pinch zoom support
+            let initialPinchDistance = 0;
+
+            function calculatePinchDistance(e) {
+                return Math.hypot(
+                    e.touches[0].clientX - e.touches[1].clientX,
+                    e.touches[0].clientY - e.touches[1].clientY
+                );
+            }
+
+            container.addEventListener('touchstart', function (e) {
+                if (e.touches.length === 2) {
+                    initialPinchDistance = calculatePinchDistance(e);
+                }
+            }, false);
+
+            container.addEventListener('touchmove', function (e) {
+                if (e.touches.length === 2) {
+                    const currentDistance = calculatePinchDistance(e);
+                    const pinchDelta = currentDistance - initialPinchDistance;
+
+                    targetZoom = Math.max(5, Math.min(30, targetZoom - pinchDelta * 0.05));
+                    initialPinchDistance = currentDistance;
+                    e.preventDefault(); // Prevent scrolling while pinching
+                }
+            }, false);
+
+// Add mousewheel zoom
+            container.addEventListener('wheel', function (e) {
+                targetZoom = Math.max(5, Math.min(30, targetZoom + e.deltaY * 0.01));
+                e.preventDefault();
+            }, false);
+
+// Animation loop
+            function animate() {
+                requestAnimationFrame(animate);
+
+                // Update camera position
+                updateCamera();
+
+                // Render scene
+                renderer.render(scene, camera);
+            }
+
+            {
+                // Initialize the animation loop
+                animate();
+
+                // Initial status update
+                updateStatusDisplay();
+            }
+        });
+    </script>

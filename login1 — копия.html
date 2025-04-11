@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Вход</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f0f0f0;
+            margin: 0;
+        }
+        .container {
+            display: flex;
+            gap: 20px;
+        }
+        .auth-form, .admin-panel {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+        .auth-form input, .admin-panel input {
+            margin: 10px 0;
+            padding: 10px;
+            width: 200px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        .auth-form button, .admin-panel button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 10px 20px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .auth-form button:hover, .admin-panel button:hover {
+            background-color: #45a049;
+        }
+        .auth-form p, .admin-panel p {
+            margin: 10px 0;
+        }
+        .auth-form a {
+            color: #4CAF50;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        .auth-form a:hover {
+            text-decoration: underline;
+        }
+        #command-history {
+            max-height: 300px;
+            overflow-y: auto;
+            text-align: left;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+        .command-entry {
+            padding: 5px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .command-entry:last-child {
+            border-bottom: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="auth-form">
+            <h2>Кіру</h2>
+            <input type="text" id="login-username" placeholder="Логин" required>
+            <input type="password" id="login-password" placeholder="Пароль" required>
+            <button onclick="login()">Кіру</button>
+            <p>Тіркелгі жоқ па? <a onclick="register()">Тіркелу</a></p>
+        </div>
+
+        <div class="admin-panel">
+            <h2>Админ панель</h2>
+            <input type="password" id="admin-password" placeholder="Админ пароль" required>
+            <button onclick="showAdminPanel()">Войти как админ</button>
+            <div id="command-history" style="display: none;"></div>
+            <button onclick="clearHistory()" style="display: none;" id="clear-history-btn">Очистить историю</button>
+        </div>
+    </div>
+
+    <script>
+        const ADMIN_PASSWORD = "admin123"; // Задайте свой пароль для админа
+
+        function login() {
+            const username = document.getElementById('login-username').value.trim();
+            const password = document.getElementById('login-password').value.trim();
+            const users = JSON.parse(localStorage.getItem('users')) || {};
+
+            if (users[username] && users[username] === password) {
+                localStorage.setItem('currentUser', username);
+                window.location.href = 'house.html';
+            } else {
+                alert('Логин немесе құпия сөз дұрыс емес.');
+            }
+        }
+
+        function register() {
+            const username = document.getElementById('login-username').value.trim();
+            const password = document.getElementById('login-password').value.trim();
+            const users = JSON.parse(localStorage.getItem('users')) || {};
+
+            if (!username || !password) {
+                alert('Барлық өрістерді толтырыңыз.');
+                return;
+            }
+            if (users[username]) {
+                alert('Мұндай логині бар пайдаланушы қазірдің өзінде бар.');
+                return;
+            }
+
+            users[username] = password;
+            localStorage.setItem('users', JSON.stringify(users));
+            alert('Тіркеу сәтті! Енді сіз кіре аласыз.');
+        }
+
+        function showAdminPanel() {
+            const adminPassword = document.getElementById('admin-password').value.trim();
+            const commandHistoryDiv = document.getElementById('command-history');
+            const clearHistoryBtn = document.getElementById('clear-history-btn');
+
+            if (adminPassword === ADMIN_PASSWORD) {
+                const commandHistory = JSON.parse(localStorage.getItem('commandHistory')) || [];
+                
+                if (commandHistory.length === 0) {
+                    commandHistoryDiv.innerHTML = '<p>История команд пуста</p>';
+                } else {
+                    commandHistoryDiv.innerHTML = commandHistory
+                        .map(entry => `
+                            <div class="command-entry">
+                                <strong>Пользователь:</strong> ${entry.user}<br>
+                                <strong>Команда:</strong> ${entry.command}<br>
+                                <strong>Время:</strong> ${entry.time}
+                            </div>
+                        `)
+                        .join('');
+                }
+                
+                commandHistoryDiv.style.display = 'block';
+                clearHistoryBtn.style.display = 'block';
+            } else {
+                alert('Неверный пароль администратора');
+            }
+        }
+
+        function clearHistory() {
+            if (confirm('Вы уверены, что хотите очистить историю команд?')) {
+                localStorage.removeItem('commandHistory');
+                const commandHistoryDiv = document.getElementById('command-history');
+                commandHistoryDiv.innerHTML = '<p>История команд пуста</p>';
+            }
+        }
+    </script>
+</body>
+</html>

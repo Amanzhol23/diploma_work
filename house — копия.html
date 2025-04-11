@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Дауыстық үйді басқару</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f0f0f0;
+        }
+        #house-map {
+            width: 1200px;
+            height: 1000px;
+            background-color: #fff;
+            border: 2px solid #333;
+            margin: 20px;
+        }
+        #status {
+            margin: 10px;
+            padding: 10px;
+            background-color: #e0e0e0;
+            border-radius: 5px;
+        }
+        button {
+            margin: 10px;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        .light-on { fill: yellow !important; }
+        .door-open { transform: rotate(45deg); transform-origin: left; }
+        .garage-door-open { transform: translateY(-150px); }
+        .window-open { transform: translateX(20px); }
+        .roof-left-open { transform: translateX(-400px); }
+        .roof-right-open { transform: translateX(400px); }
+        #house-content.hidden { visibility: hidden; }
+        .sprinkler-on { fill: blue !important; }
+        #car.hidden { visibility: hidden; }
+
+        .light-flash { animation: flash 0.5s ease-in-out; }
+        @keyframes flash {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.5); }
+            100% { transform: scale(1); }
+        }
+        .light-fade { animation: fade 0.5s ease-in-out; }
+        @keyframes fade {
+            0% { transform: scale(1); }
+            100% { transform: scale(0.8); }
+        }
+        .door-open-effect { animation: doorOpen 0.7s ease-in-out; }
+        @keyframes doorOpen {
+            0% { transform: rotate(0deg); }
+            70% { transform: rotate(45deg); }
+            85% { transform: rotate(40deg); }
+            100% { transform: rotate(45deg); }
+        }
+        .door-close-effect { animation: doorClose 0.7s ease-in-out; }
+        @keyframes doorClose {
+            0% { transform: rotate(45deg); }
+            70% { transform: rotate(0deg); }
+            85% { transform: rotate(5deg); }
+            100% { transform: rotate(0deg); }
+        }
+        .garage-door-open-effect { animation: garageOpen 1s ease-in-out; }
+        @keyframes garageOpen {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(-150px); }
+        }
+        .garage-door-close-effect { animation: garageClose 1s ease-in-out; }
+        @keyframes garageClose {
+            0% { transform: translateY(-150px); }
+            100% { transform: translateY(0); }
+        }
+        .sprinkler-on {
+            animation: sprinklerSpin 2s infinite linear;
+        }
+        @keyframes sprinklerSpin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .sprinkler-water-on {
+            animation: waterBurst 1s infinite alternate;
+            visibility: visible !important;
+        }
+        @keyframes waterBurst {
+            0% { opacity: 0.3; transform: scale(0.5); }
+            100% { opacity: 1; transform: scale(1.5); }
+        }
+        .window-open-effect { animation: windowOpen 0.5s ease-in-out; }
+        @keyframes windowOpen {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(20px); }
+        }
+        .window-close-effect { animation: windowClose 0.5s ease-in-out; }
+        @keyframes windowClose {
+            0% { transform: translateX(20px); }
+            100% { transform: translateX(0); }
+        }
+    </style>
+</head>
+<body>
+    <div id="main-screen">
+        <h1>Дауыстық үйді басқару</h1>
+        <div id="status">Дауыспен басқаруды бастау үшін түймені басыңыз</div>
+        <button onclick="startVoiceControl()">Дауыстық басқаруды бастаңыз</button>
+        <button onclick="logout()">Шығу</button>
+        
+        <svg id="house-map" viewBox="0 0 1200 1000">
+            <!-- Газон вокруг дома -->
+            <rect x="0" y="0" width="1200" height="1000" fill="#90ee90" />
+            <!-- Трава разного вида -->
+            <path d="M50,50 Q60,30 70,50 Q80,70 90,50 Q100,30 110,50" fill="none" stroke="#228B22" stroke-width="2"/>
+            <path d="M150,80 Q160,60 170,80 Q180,100 190,80 Q200,60 210,80" fill="none" stroke="#006400" stroke-width="3"/>
+            <path d="M250,70 Q260,50 270,70 Q280,90 290,70 Q300,50 310,70" fill="none" stroke="#32CD32" stroke-width="2"/>
+            <path d="M1000,50 Q1010,30 1020,50 Q1030,70 1040,50 Q1050,30 1060,50" fill="none" stroke="#228B22" stroke-width="2"/>
+            <path d="M1100,80 Q1110,60 1120,80 Q1130,100 1140,80 Q1150,60 1160,80" fill="none" stroke="#006400" stroke-width="3"/>
+            <path d="M50,900 Q60,880 70,900 Q80,920 90,900 Q100,880 110,900" fill="none" stroke="#32CD32" stroke-width="2"/>
+            <path d="M1000,900 Q1010,880 1020,900 Q1030,920 1040,900 Q1050,880 1060,900" fill="none" stroke="#228B22" stroke-width="2"/>
+            
+            <!-- Цветы -->
+            <g transform="translate(80, 120)">
+                <circle cx="0" cy="0" r="5" fill="yellow"/>
+                <circle cx="10" cy="0" r="5" fill="red"/>
+                <circle cx="-10" cy="0" r="5" fill="red"/>
+                <circle cx="0" cy="10" r="5" fill="red"/>
+                <circle cx="0" cy="-10" r="5" fill="red"/>
+            </g>
+            <g transform="translate(200, 150)">
+                <circle cx="0" cy="0" r="5" fill="yellow"/>
+                <circle cx="10" cy="0" r="5" fill="purple"/>
+                <circle cx="-10" cy="0" r="5" fill="purple"/>
+                <circle cx="0" cy="10" r="5" fill="purple"/>
+                <circle cx="0" cy="-10" r="5" fill="purple"/>
+            </g>
+            <g transform="translate(1050, 120)">
+                <circle cx="0" cy="0" r="5" fill="yellow"/>
+                <circle cx="10" cy="0" r="5" fill="pink"/>
+                <circle cx="-10" cy="0" r="5" fill="pink"/>
+                <circle cx="0" cy="10" r="5" fill="pink"/>
+                <circle cx="0" cy="-10" r="5" fill="pink"/>
+            </g>
+            <g transform="translate(80, 850)">
+                <circle cx="0" cy="0" r="5" fill="yellow"/>
+                <circle cx="10" cy="0" r="5" fill="orange"/>
+                <circle cx="-10" cy="0" r="5" fill="orange"/>
+                <circle cx="0" cy="10" r="5" fill="orange"/>
+                <circle cx="0" cy="-10" r="5" fill="orange"/>
+            </g>
+
+            <!-- Дорога к гаражу -->
+            <rect x="650" y="850" width="200" height="150" fill="#808080"/>
+            <line x1="750" y1="850" x2="750" y2="1000" stroke="yellow" stroke-width="2" stroke-dasharray="10"/>
+            
+            <!-- Спринклеры автополива -->
+            <g id="sprinkler1-group">
+                <circle id="sprinkler1" cx="50" cy="50" r="5" fill="gray" />
+                <circle id="sprinkler1-water" class="sprinkler-water" cx="50" cy="50" r="10" fill="blue" visibility="hidden"/>
+            </g>
+            <g id="sprinkler2-group">
+                <circle id="sprinkler2" cx="1150" cy="50" r="5" fill="gray" />
+                <circle id="sprinkler2-water" class="sprinkler-water" cx="1150" cy="50" r="10" fill="blue" visibility="hidden"/>
+            </g>
+            <g id="sprinkler3-group">
+                <circle id="sprinkler3" cx="50" cy="950" r="5" fill="gray" />
+                <circle id="sprinkler3-water" class="sprinkler-water" cx="50" cy="950" r="10" fill="blue" visibility="hidden"/>
+            </g>
+            <g id="sprinkler4-group">
+                <circle id="sprinkler4" cx="1150" cy="950" r="5" fill="gray" />
+                <circle id="sprinkler4-water" class="sprinkler-water" cx="1150" cy="950" r="10" fill="blue" visibility="hidden"/>
+            </g>
+            <g id="sprinkler5-group">
+                <circle id="sprinkler5" cx="600" cy="50" r="5" fill="gray" />
+                <circle id="sprinkler5-water" class="sprinkler-water" cx="600" cy="50" r="10" fill="blue" visibility="hidden"/>
+            </g>
+            <g id="sprinkler6-group">
+                <circle id="sprinkler6" cx="600" cy="950" r="5" fill="gray" />
+                <circle id="sprinkler6-water" class="sprinkler-water" cx="600" cy="950" r="10" fill="blue" visibility="hidden"/>
+            </g>
+
+            <!-- Группа для дома -->
+            <g id="house-content" class="hidden">
+                <!-- Внешние стены дома с белым фоном -->
+                <rect x="100" y="100" width="900" height="700" fill="#fff" stroke="black" stroke-width="4"/>
+
+                <!-- Коридор внутри дома с дверью на улицу -->
+                <rect x="400" y="100" width="200" height="700" fill="none" stroke="black" stroke-width="2"/>
+                <text x="500" y="90" font-size="16">Коридор</text>
+                <rect x="410" y="130" width="60" height="20" fill="#a5a5a5"/>
+                <rect x="410" y="160" width="60" height="20" fill="#a5a5a5"/>
+                <rect id="corridor-door" x="580" y="700" width="20" height="50" fill="#8b4513"/>
+
+                <!-- Спальня -->
+                <rect x="100" y="100" width="300" height="200" fill="none" stroke="black" stroke-width="2"/>
+                <text x="250" y="90" font-size="16">Спальня</text>
+                <rect x="130" y="150" width="100" height="60" fill="#d4a5a5"/>
+                <rect x="300" y="150" width="40" height="80" fill="#a5a5a5"/>
+                <rect x="290" y="150" width="20" height="20" fill="#d4d4a5"/>
+                <circle id="bedroom-light" cx="250" cy="110" r="10" fill="gray"/>
+                <rect id="bedroom-window" x="100" y="170" width="20" height="40" fill="#87ceeb"/>
+                <rect id="bedroom-door" x="380" y="200" width="20" height="50" fill="#8b4513"/>
+
+                <!-- Кухня -->
+                <rect x="600" y="100" width="300" height="200" fill="none" stroke="black" stroke-width="2"/>
+                <text x="750" y="90" font-size="16">Кухня</text>
+                <rect x="650" y="200" width="80" height="40" fill="#a5d4a5"/>
+                <rect x="650" y="170" width="20" height="20" fill="#d4d4a5"/>
+                <rect x="710" y="170" width="20" height="20" fill="#d4d4a5"/>
+                <rect x="750" y="150" width="40" height="40" fill="#d4d4d4"/>
+                <circle cx="760" cy="160" r="5" fill="black"/>
+                <circle cx="780" cy="160" r="5" fill="black"/>
+                <rect x="800" y="150" width="30" height="50" fill="#c0c0c0"/>
+                <circle id="kitchen-light" cx="750" cy="110" r="10" fill="gray"/>
+                <rect id="kitchen-window" x="880" y="170" width="20" height="40" fill="#87ceeb"/>
+                <rect id="kitchen-door" x="600" y="200" width="20" height="50" fill="#8b4513"/>
+
+                <!-- Прихожая -->
+                <rect x="100" y="650" width="300" height="150" fill="none" stroke="black" stroke-width="2"/>
+                <text x="250" y="640" font-size="16">Прихожая</text>
+                <rect x="130" y="700" width="60" height="20" fill="#a5a5a5"/>
+                <rect id="entrance-window" x="100" y="670" width="20" height="40" fill="#87ceeb"/>
+                <rect x="250" y="700" width="60" height="20" fill="#d4d4a5"/>
+                <rect id="front-door" x="380" y="700" width="20" height="50" fill="#8b4513"/>
+                <rect id="street-door" x="360" y="700" width="20" height="50" fill="#8b4513"/>
+                <circle id="entrance-light" cx="250" cy="660" r="10" fill="gray"/>
+
+                <!-- Зал -->
+                <rect x="600" y="300" width="300" height="300" fill="none" stroke="black" stroke-width="2"/>
+                <text x="750" y="290" font-size="16">Зал</text>
+                <rect x="650" y="400" width="100" height="40" fill="#a5d4a5"/>
+                <circle cx="700" cy="350" r="20" fill="#d4d4a5"/>
+                <rect x="750" y="350" width="60" height="20" fill="#d4d4d4"/>
+                <rect x="650" y="450" width="40" height="20" fill="#a5d4a5"/>
+                <circle id="living-room-light" cx="750" cy="310" r="10" fill="gray"/>
+                <rect id="living-room-window" x="880" y="400" width="20" height="40" fill="#87ceeb"/>
+                <rect id="living-room-door" x="600" y="400" width="20" height="50" fill="#8b4513"/>
+
+                <!-- Холл -->
+                <rect x="100" y="300" width="300" height="350" fill="none" stroke="black" stroke-width="2"/>
+                <text x="250" y="290" font-size="16">Холл</text>
+                <circle cx="250" cy="450" r="20" fill="#d4d4a5"/>
+                <rect x="300" y="440" width="40" height="20" fill="#a5d4a5"/>
+                <rect x="180" y="400" width="40" height="80" fill="#a5a5a5"/>
+                <circle id="hall-light" cx="250" cy="310" r="10" fill="gray"/>
+                <rect id="hall-window" x="100" y="450" width="20" height="40" fill="#87ceeb"/>
+                <rect id="hall-door" x="380" y="450" width="20" height="50" fill="#8b4513"/>
+
+                <!-- Гараж внутри дома -->
+                <rect x="600" y="600" width="300" height="200" fill="none" stroke="black" stroke-width="2"/>
+                <text x="750" y="590" font-size="16">Гараж</text>
+                <rect id="garage-door" x="650" y="700" width="200" height="150" fill="#696969"/>
+                <g id="car" class="hidden">
+                    <rect x="700" y="750" width="100" height="50" fill="#ff0000"/>
+                    <circle cx="720" cy="800" r="10" fill="black"/>
+                    <circle cx="780" cy="800" r="10" fill="black"/>
+                </g>
+            </g>
+
+            <!-- Вальмовая крыша -->
+            <polygon id="roof-left" points="100,100 550,100 450,60 250,60" fill="#8b0000" stroke="black" stroke-width="2" style="--translate-x: -400px;"/>
+            <polygon id="roof-right" points="550,100 1000,100 900,60 700,60" fill="#8b0000" stroke="black" stroke-width="2" style="--translate-x: 400px;"/>
+            <line id="roof-left-line1" x1="250" y1="60" x2="100" y2="100" stroke="black" stroke-width="1"/>
+            <line id="roof-right-line1" x1="900" y1="60" x2="1000" y2="100" stroke="black" stroke-width="1"/>
+            <line id="roof-left-line2" x1="250" y1="60" x2="450" y2="60" stroke="black" stroke-width="1"/>
+            <line id="roof-right-line2" x1="700" y1="60" x2="900" y2="60" stroke="black" stroke-width="1"/>
+        </svg>
+    </div>
+
+    <script>
+        const status = document.getElementById('status');
+        const houseMap = document.getElementById('house-map');
+        const houseContent = document.getElementById('house-content');
+        const car = document.getElementById('car');
+        let isRoofOpen = false;
+        let sprinklerInterval = null;
+
+        const elements = {
+            lights: {
+                'спальня': document.getElementById('bedroom-light'),
+                'кухня': document.getElementById('kitchen-light'),
+                'зал': document.getElementById('living-room-light'),
+                'холл': document.getElementById('hall-light'),
+                'прихожая': document.getElementById('entrance-light')
+            },
+            doors: {
+                'входная': document.getElementById('front-door'),
+                'спальня': document.getElementById('bedroom-door'),
+                'кухня': document.getElementById('kitchen-door'),
+                'зал': document.getElementById('living-room-door'),
+                'холл': document.getElementById('hall-door'),
+                'коридор': document.getElementById('corridor-door'),
+                'гараж': document.getElementById('garage-door'),
+                'уличная': document.getElementById('street-door')
+            },
+            windows: {
+                'спальня': document.getElementById('bedroom-window'),
+                'кухня': document.getElementById('kitchen-window'),
+                'зал': document.getElementById('living-room-window'),
+                'холл': document.getElementById('hall-window'),
+                'прихожая': document.getElementById('entrance-window')
+            },
+            roof: {
+                left: document.getElementById('roof-left'),
+                right: document.getElementById('roof-right')
+            },
+            sprinklers: [
+                document.getElementById('sprinkler1'),
+                document.getElementById('sprinkler2'),
+                document.getElementById('sprinkler3'),
+                document.getElementById('sprinkler4'),
+                document.getElementById('sprinkler5'),
+                document.getElementById('sprinkler6')
+            ],
+            sprinklerWaters: [
+                document.getElementById('sprinkler1-water'),
+                document.getElementById('sprinkler2-water'),
+                document.getElementById('sprinkler3-water'),
+                document.getElementById('sprinkler4-water'),
+                document.getElementById('sprinkler5-water'),
+                document.getElementById('sprinkler6-water')
+            ]
+        };
+
+        if (!localStorage.getItem('currentUser')) {
+            window.location.href = 'login.html';
+        }
+
+        function logout() {
+            localStorage.removeItem('currentUser');
+            window.location.href = 'login.html';
+        }
+
+        function startVoiceControl() {
+            // Проверяем поддержку API распознавания речи
+            if (!('SpeechRecognition' in window) && !('webkitSpeechRecognition' in window)) {
+                status.textContent = 'Ошибка: Ваш браузер не поддерживает распознавание речи. Используйте Chrome.';
+                console.log('SpeechRecognition не поддерживается');
+                return;
+            }
+
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            const recognition = new SpeechRecognition();
+            recognition.lang = 'ru-RU';
+            recognition.interimResults = false; // Отключаем промежуточные результаты
+            recognition.maxAlternatives = 1; // Ограничиваем до одного варианта
+
+            recognition.onstart = () => {
+                status.textContent = 'Слушаю... Произнесите команду';
+                console.log('Распознавание началось');
+            };
+
+            recognition.onresult = (event) => {
+                const command = event.results[0][0].transcript.toLowerCase();
+                status.textContent = `Распознано: ${command}`;
+                console.log(`Распознанная команда: ${command}`);
+                processCommand(command);
+                logCommand(command);
+            };
+
+            recognition.onerror = (event) => {
+                status.textContent = `Ошибка распознавания: ${event.error}`;
+                console.error(`Ошибка: ${event.error}`);
+                if (event.error === 'no-speech') {
+                    status.textContent = 'Ошибка: Не обнаружено речи. Говорите громче.';
+                } else if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+                    status.textContent = 'Ошибка: Разрешите доступ к микрофону в настройках браузера.';
+                } else if (event.error === 'audio-capture') {
+                    status.textContent = 'Ошибка: Нет доступа к микрофону. Проверьте подключение.';
+                }
+            };
+
+            recognition.onend = () => {
+                status.textContent = 'Распознавание завершено. Нажмите кнопку снова, чтобы продолжить.';
+                console.log('Распознавание завершено');
+            };
+
+            try {
+                recognition.start();
+                console.log('Попытка запуска распознавания');
+            } catch (error) {
+                status.textContent = `Ошибка запуска: ${error.message}`;
+                console.error(`Ошибка запуска: ${error}`);
+            }
+        }
+
+        function processCommand(command) {
+            houseMap.classList.add('house-glow');
+
+            if (command.includes('старт')) {
+                toggleRoof(true);
+                elements.roof.left.classList.add('roof-open-effect');
+                elements.roof.right.classList.add('roof-open-effect');
+                status.textContent = 'Шатыр ашық';
+            }
+            else if (command.includes('стоп')) {
+                toggleRoof(false);
+                elements.roof.left.classList.add('roof-close-effect');
+                elements.roof.right.classList.add('roof-close-effect');
+                status.textContent = 'Шатыр жабық';
+            }
+            else if (command.includes('сброс') || command.includes('сбросить всё')) {
+                resetAll();
+                status.textContent = 'Все элементы сброшены';
+            }
+            else if (command.includes('включи полив') || command.includes('включить полив')) {
+                startSprinklers();
+                status.textContent = 'Автополив включён';
+            }
+            else if (command.includes('выключи полив') || command.includes('выключить полив')) {
+                stopSprinklers();
+                status.textContent = 'Автополив выключен';
+            }
+            else if (command.includes('включи весь свет') || command.includes('включить весь свет')) {
+                toggleAllLights(true);
+                status.textContent = 'Весь свет в доме включён';
+            }
+            else if (command.includes('выключи весь свет') || command.includes('выключить весь свет')) {
+                toggleAllLights(false);
+                status.textContent = 'Весь свет в доме выключен';
+            }
+            else if (!isRoofOpen) {
+                status.textContent = 'Сначала откройте крышу командой "старт"';
+                return;
+            }
+            else if (command.includes('включи свет')) {
+                if (command.includes('спальня') || command.includes('спальне') || command.includes('спальни')) {
+                    toggleLight(elements.lights['спальня'], true);
+                    elements.lights['спальня'].classList.add('light-flash');
+                    status.textContent = 'Свет в спальне включён';
+                }
+                else if (command.includes('кухня') || command.includes('кухне') || command.includes('кухни')) {
+                    toggleLight(elements.lights['кухня'], true);
+                    elements.lights['кухня'].classList.add('light-flash');
+                    status.textContent = 'Свет на кухне включён';
+                }
+                else if (command.includes('зал')) {
+                    toggleLight(elements.lights['зал'], true);
+                    elements.lights['зал'].classList.add('light-flash');
+                    status.textContent = 'Свет в зале включён';
+                }
+                else if (command.includes('холл') || command.includes('холле') || command.includes('хол')) {
+                    toggleLight(elements.lights['холл'], true);
+                    elements.lights['холл'].classList.add('light-flash');
+                    status.textContent = 'Свет в холле включён';
+                }
+                else if (command.includes('прихожая') || command.includes('прихоже')) {
+                    toggleLight(elements.lights['прихожая'], true);
+                    elements.lights['прихожая'].classList.add('light-flash');
+                    status.textContent = 'Свет в прихожей включён';
+                }
+            }
+            else if (command.includes('выключи свет')) {
+                if (command.includes('спальня') || command.includes('спальне') || command.includes('спальни')) {
+                    toggleLight(elements.lights['спальня'], false);
+                    elements.lights['спальня'].classList.add('light-fade');
+                    status.textContent = 'Свет в спальне выключен';
+                }
+                else if (command.includes('кухня') || command.includes('кухне') || command.includes('кухни')) {
+                    toggleLight(elements.lights['кухня'], false);
+                    elements.lights['кухня'].classList.add('light-fade');
+                    status.textContent = 'Свет на кухне выключен';
+                }
+                else if (command.includes('зал')) {
+                    toggleLight(elements.lights['зал'], false);
+                    elements.lights['зал'].classList.add('light-fade');
+                    status.textContent = 'Свет в зале выключен';
+                }
+                else if (command.includes('холл') || command.includes('холле') || command.includes('хол')) {
+                    toggleLight(elements.lights['холл'], false);
+                    elements.lights['холл'].classList.add('light-fade');
+                    status.textContent = 'Свет в холле выключен';
+                }
+                else if (command.includes('прихожая') || command.includes('прихоже')) {
+                    toggleLight(elements.lights['прихожая'], false);
+                    elements.lights['прихожая'].classList.add('light-fade');
+                    status.textContent = 'Свет в прихожей выключен';
+                }
+            }
+            else if (command.includes('открой')) {
+                if (command.includes('гараж') || command.includes('гаражную дверь')) {
+                    toggleGarageDoor(true);
+                    elements.doors['гараж'].classList.add('garage-door-open-effect');
+                    car.classList.remove('hidden');
+                    status.textContent = 'Гаражная дверь открыта';
+                }
+                else if (command.includes('коридор') || command.includes('дверь коридора')) {
+                    toggleDoor(elements.doors['коридор'], true);
+                    elements.doors['коридор'].classList.add('door-open-effect');
+                    status.textContent = 'Дверь коридора открыта';
+                }
+                else if (command.includes('уличная') || command.includes('уличную дверь')) {
+                    toggleDoor(elements.doors['уличная'], true);
+                    elements.doors['уличная'].classList.add('door-open-effect');
+                    status.textContent = 'Уличная дверь открыта';
+                }
+                else if (command.includes('дверь')) {
+                    if (command.includes('входная') || (command.includes('прихожая') || command.includes('прихоже'))) {
+                        toggleDoor(elements.doors['входная'], true);
+                        elements.doors['входная'].classList.add('door-open-effect');
+                        status.textContent = 'Входная дверь открыта';
+                    }
+                    else if (command.includes('спальня') || command.includes('спальне') || command.includes('спальни')) {
+                        toggleDoor(elements.doors['спальня'], true);
+                        elements.doors['спальня'].classList.add('door-open-effect');
+                        status.textContent = 'Дверь спальни открыта';
+                    }
+                    else if (command.includes('кухня') || command.includes('кухне') || command.includes('кухни')) {
+                        toggleDoor(elements.doors['кухня'], true);
+                        elements.doors['кухня'].classList.add('door-open-effect');
+                        status.textContent = 'Дверь кухни открыта';
+                    }
+                    else if (command.includes('зал')) {
+                        toggleDoor(elements.doors['зал'], true);
+                        elements.doors['зал'].classList.add('door-open-effect');
+                        status.textContent = 'Дверь зала открыта';
+                    }
+                    else if (command.includes('холл') || command.includes('холле') || command.includes('хол')) {
+                        toggleDoor(elements.doors['холл'], true);
+                        elements.doors['холл'].classList.add('door-open-effect');
+                        status.textContent = 'Дверь холла открыта';
+                    }
+                }
+                else if (command.includes('окно')) {
+                    if (command.includes('спальня') || command.includes('спальне') || command.includes('спальни')) {
+                        toggleWindow(elements.windows['спальня'], true);
+                        elements.windows['спальня'].classList.add('window-open-effect');
+                        status.textContent = 'Окно спальни открыто';
+                    }
+                    else if (command.includes('кухня') || command.includes('кухне') || command.includes('кухни')) {
+                        toggleWindow(elements.windows['кухня'], true);
+                        elements.windows['кухня'].classList.add('window-open-effect');
+                        status.textContent = 'Окно кухни открыто';
+                    }
+                    else if (command.includes('зал')) {
+                        toggleWindow(elements.windows['зал'], true);
+                        elements.windows['зал'].classList.add('window-open-effect');
+                        status.textContent = 'Окно зала открыто';
+                    }
+                    else if (command.includes('холл') || command.includes('холле') || command.includes('хол')) {
+                        toggleWindow(elements.windows['холл'], true);
+                        elements.windows['холл'].classList.add('window-open-effect');
+                        status.textContent = 'Окно холла открыто';
+                    }
+                    else if (command.includes('прихожая') || command.includes('прихоже')) {
+                        toggleWindow(elements.windows['прихожая'], true);
+                        elements.windows['прихожая'].classList.add('window-open-effect');
+                        status.textContent = 'Окно прихожей открыто';
+                    }
+                }
+            }
+            else if (command.includes('закрой')) {
+                if (command.includes('гараж') || command.includes('гаражную дверь')) {
+                    toggleGarageDoor(false);
+                    elements.doors['гараж'].classList.add('garage-door-close-effect');
+                    car.classList.add('hidden');
+                    status.textContent = 'Гаражная дверь закрыта';
+                }
+                else if (command.includes('коридор') || command.includes('дверь коридора')) {
+                    toggleDoor(elements.doors['коридор'], false);
+                    elements.doors['коридор'].classList.add('door-close-effect');
+                    status.textContent = 'Дверь коридора закрыта';
+                }
+                else if (command.includes('уличная') || command.includes('уличную дверь')) {
+                    toggleDoor(elements.doors['уличная'], false);
+                    elements.doors['уличная'].classList.add('door-close-effect');
+                    status.textContent = 'Уличная дверь закрыта';
+                }
+                else if (command.includes('дверь')) {
+                    if (command.includes('входная') || (command.includes('прихожая') || command.includes('прихоже'))) {
+                        toggleDoor(elements.doors['входная'], false);
+                        elements.doors['входная'].classList.add('door-close-effect');
+                        status.textContent = 'Входная дверь закрыта';
+                    }
+                    else if (command.includes('спальня') || command.includes('спальне') || command.includes('спальни')) {
+                        toggleDoor(elements.doors['спальня'], false);
+                        elements.doors['спальня'].classList.add('door-close-effect');
+                        status.textContent = 'Дверь спальни закрыта';
+                    }
+                    else if (command.includes('кухня') || command.includes('кухне') || command.includes('кухни')) {
+                        toggleDoor(elements.doors['кухня'], false);
+                        elements.doors['кухня'].classList.add('door-close-effect');
+                        status.textContent = 'Дверь кухни закрыта';
+                    }
+                    else if (command.includes('зал')) {
+                        toggleDoor(elements.doors['зал'], false);
+                        elements.doors['зал'].classList.add('door-close-effect');
+                        status.textContent = 'Дверь зала закрыта';
+                    }
+                    else if (command.includes('холл') || command.includes('холле') || command.includes('хол')) {
+                        toggleDoor(elements.doors['холл'], false);
+                        elements.doors['холл'].classList.add('door-close-effect');
+                        status.textContent = 'Дверь холла закрыта';
+                    }
+                }
+                else if (command.includes('окно')) {
+                    if (command.includes('спальня') || command.includes('спальне') || command.includes('спальни')) {
+                        toggleWindow(elements.windows['спальня'], false);
+                        elements.windows['спальня'].classList.add('window-close-effect');
+                        status.textContent = 'Окно спальни закрыто';
+                    }
+                    else if (command.includes('кухня') || command.includes('кухне') || command.includes('кухни')) {
+                        toggleWindow(elements.windows['кухня'], false);
+                        elements.windows['кухня'].classList.add('window-close-effect');
+                        status.textContent = 'Окно кухни закрыто';
+                    }
+                    else if (command.includes('зал')) {
+                        toggleWindow(elements.windows['зал'], false);
+                        elements.windows['зал'].classList.add('window-close-effect');
+                        status.textContent = 'Окно зала закрыто';
+                    }
+                    else if (command.includes('холл') || command.includes('холле') || command.includes('хол')) {
+                        toggleWindow(elements.windows['холл'], false);
+                        elements.windows['холл'].classList.add('window-close-effect');
+                        status.textContent = 'Окно холла закрыто';
+                    }
+                    else if (command.includes('прихожая') || command.includes('прихоже')) {
+                        toggleWindow(elements.windows['прихожая'], false);
+                        elements.windows['прихожая'].classList.add('window-close-effect');
+                        status.textContent = 'Окно прихожей закрыто';
+                    }
+                }
+            }
+        }
+
+        function toggleLight(element, state) {
+            if (state) element.classList.add('light-on');
+            else element.classList.remove('light-on');
+        }
+
+        function toggleDoor(element, state) {
+            if (state) element.classList.add('door-open');
+            else element.classList.remove('door-open');
+        }
+
+        function toggleWindow(element, state) {
+            if (state) element.classList.add('window-open');
+            else element.classList.remove('window-open');
+        }
+
+        function toggleRoof(state) {
+            if (state) {
+                elements.roof.left.classList.add('roof-left-open');
+                elements.roof.right.classList.add('roof-right-open');
+                houseContent.classList.remove('hidden');
+                isRoofOpen = true;
+            } else {
+                elements.roof.left.classList.remove('roof-left-open');
+                elements.roof.right.classList.remove('roof-right-open');
+                houseContent.classList.add('hidden');
+                isRoofOpen = false;
+            }
+        }
+
+        function toggleGarageDoor(state) {
+            if (state) elements.doors['гараж'].classList.add('garage-door-open');
+            else elements.doors['гараж'].classList.remove('garage-door-open');
+        }
+
+        function startSprinklers() {
+            if (sprinklerInterval) return;
+            let currentIndex = 0;
+
+            sprinklerInterval = setInterval(() => {
+                elements.sprinklers.forEach((sprinkler, index) => {
+                    sprinkler.classList.remove('sprinkler-on');
+                    elements.sprinklerWaters[index].classList.remove('sprinkler-water-on');
+                });
+
+                const sprinkler = elements.sprinklers[currentIndex];
+                const water = elements.sprinklerWaters[currentIndex];
+                sprinkler.classList.add('sprinkler-on');
+                water.classList.add('sprinkler-water-on');
+
+                currentIndex = (currentIndex + 1) % elements.sprinklers.length;
+            }, 1000);
+        }
+
+        function stopSprinklers() {
+            if (sprinklerInterval) {
+                clearInterval(sprinklerInterval);
+                sprinklerInterval = null;
+            }
+            elements.sprinklers.forEach((sprinkler, index) => {
+                sprinkler.classList.remove('sprinkler-on');
+                elements.sprinklerWaters[index].classList.remove('sprinkler-water-on');
+            });
+        }
+
+        function toggleAllLights(state) {
+            for (const light of Object.values(elements.lights)) {
+                toggleLight(light, state);
+                if (state) light.classList.add('light-flash');
+                else light.classList.add('light-fade');
+            }
+        }
+
+        function resetAll() {
+            for (const light of Object.values(elements.lights)) {
+                toggleLight(light, false);
+                light.classList.add('light-fade');
+            }
+            for (const door of Object.values(elements.doors)) {
+                if (door.id === 'garage-door') {
+                    toggleGarageDoor(false);
+                    car.classList.add('hidden');
+                    door.classList.add('garage-door-close-effect');
+                } else {
+                    toggleDoor(door, false);
+                    door.classList.add('door-close-effect');
+                }
+            }
+            for (const window of Object.values(elements.windows)) {
+                toggleWindow(window, false);
+                window.classList.add('window-close-effect');
+            }
+            toggleRoof(false);
+            elements.roof.left.classList.add('roof-close-effect');
+            elements.roof.right.classList.add('roof-close-effect');
+            stopSprinklers();
+        }
+
+        function logCommand(command) {
+            const commandHistory = JSON.parse(localStorage.getItem('commandHistory')) || [];
+            const time = new Date().toLocaleString('ru-RU');
+            commandHistory.push({
+                user: localStorage.getItem('currentUser'),
+                command: command,
+                time: time
+            });
+            localStorage.setItem('commandHistory', JSON.stringify(commandHistory));
+        }
+    </script>
+    <script src="static/js/ai-integration.js">
+    </script>
+</body>
+</html>

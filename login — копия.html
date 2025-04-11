@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Вход</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f0f0f0;
+            margin: 0;
+        }
+        .auth-form {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+        .auth-form input {
+            margin: 10px 0;
+            padding: 10px;
+            width: 200px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        .auth-form button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 10px 20px;
+            cursor: pointer;
+        }
+        .auth-form button:hover {
+            background-color: #45a049;
+        }
+        .auth-form p {
+            margin: 10px 0;
+        }
+        .auth-form a {
+            color: #4CAF50;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        .auth-form a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-form">
+        <h2>Кіру</h2>
+        <input type="text" id="login-username" placeholder="Логин" required>
+        <input type="password" id="login-password" placeholder="Пароль" required>
+        <button onclick="login()">Кіру</button>
+        <p>Тіркелгі жоқ па? <a onclick="register()">Тіркелу</a></p>
+    </div>
+
+    <script>
+        function login() {
+            const username = document.getElementById('login-username').value.trim();
+            const password = document.getElementById('login-password').value.trim();
+            const users = JSON.parse(localStorage.getItem('users')) || {};
+
+            if (users[username] && users[username] === password) {
+                localStorage.setItem('currentUser', username);
+                window.location.href = 'house.html'; // Переход на основную страницу
+            } else {
+                alert('Логин немесе құпия сөз дұрыс емес.');
+            }
+        }
+
+        function register() {
+            const username = document.getElementById('login-username').value.trim();
+            const password = document.getElementById('login-password').value.trim();
+            const users = JSON.parse(localStorage.getItem('users')) || {};
+
+            if (!username || !password) {
+                alert('Барлық өрістерді толтырыңыз.');
+                return;
+            }
+            if (users[username]) {
+                alert('Мұндай логині бар пайдаланушы қазірдің өзінде бар.');
+                return;
+            }
+
+            users[username] = password;
+            localStorage.setItem('users', JSON.stringify(users));
+            alert('Тіркеу сәтті! Енді сіз кіре аласыз.');
+        }
+    </script>
+</body>
+</html>
