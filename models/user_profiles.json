@@ -1,0 +1,17 @@
+{
+    "user1": {
+        "command_frequencies": {
+            "roof_open": 2,
+            "light_on": 1,
+            "garage_open": 1,
+            "sprinkler_on": 1
+        },
+        "room_frequencies": {},
+        "time_patterns": {
+            "morning": 5,
+            "afternoon": 0,
+            "evening": 0,
+            "night": 0
+        }
+    }
+}

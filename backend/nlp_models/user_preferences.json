@@ -1,0 +1,10 @@
+{
+  "user1": {
+    "intents": {
+      "query": 8
+    },
+    "commands": {
+      "unknown": 8
+    }
+  }
+}
